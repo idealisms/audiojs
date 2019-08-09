@@ -1,6 +1,6 @@
 // A cross-browser javascript shim for html5 audio
 (function(audiojs, audiojsInstance, container) {
-  // Use the path to the audio.js file to create relative paths to the swf and player graphics
+  // Use the path to the audio.js file to create relative paths to the player graphics
   // Remember that some systems (e.g. ruby on rails) append strings like '?1301478336' to asset paths
   var path = (function() {
     var re = new RegExp('audio(\.min)?\.js.*'),
@@ -24,16 +24,6 @@
   container[audiojs] = {
     instanceCount: 0,
     instances: {},
-    // The markup for the swf. It is injected into the page if there is not support for the `<audio>` element. The `$n`s are placeholders.
-    // `$1` The name of the flash movie
-    // `$2` The path to the swf
-    // `$3` Cache invalidation
-    flashSource: '\
-      <object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" id="$1" width="1" height="1" name="$1" style="position: absolute; left: -1px;"> \
-        <param name="movie" value="$2?playerInstance='+audiojs+'.instances[\'$1\']&datetime=$3"> \
-        <param name="allowscriptaccess" value="always"> \
-        <embed name="$1" src="$2?playerInstance='+audiojs+'.instances[\'$1\']&datetime=$3" width="1" height="1" allowscriptaccess="always"> \
-      </object>',
 
     // ### The main settings object
     // Where all the default settings are stored. Each of these variables and methods can be overwritten by the user-provided `options` object.
@@ -43,25 +33,6 @@
       preload: true,
       imageLocation: path + 'player-graphics.gif',
       retinaImageLocation: path + 'player-graphics@2x.gif',
-      swfLocation: path + 'audiojs.swf',
-      useFlash: (function() {
-        var a = document.createElement('audio');
-        return !(a.canPlayType && a.canPlayType('audio/mpeg;').replace(/no/, ''));
-      })(),
-      hasFlash: (function() {
-        if (navigator.plugins && navigator.plugins.length && navigator.plugins['Shockwave Flash']) {
-          return true;
-        } else if (navigator.mimeTypes && navigator.mimeTypes.length) {
-          var mimeType = navigator.mimeTypes['application/x-shockwave-flash'];
-          return mimeType && mimeType.enabledPlugin;
-        } else {
-          try {
-            var ax = new ActiveXObject('ShockwaveFlash.ShockwaveFlash');
-            return true;
-          } catch (e) {}
-        }
-        return false;
-      })(),
       // The default markup and classes for creating the player:
       createPlayer: {
         markup: '\
@@ -147,15 +118,6 @@
         .error .error-message { display: block; }',
       // The default event callbacks:
       trackEnded: function(e) {},
-      flashError: function() {
-        var player = this.settings.createPlayer,
-            errorMessage = getByClass(player.errorMessageClass, this.wrapper),
-            html = 'Missing <a href="http://get.adobe.com/flashplayer/">flash player</a> plugin.';
-        if (this.mp3) html += ' <a href="'+this.mp3+'">Download audio file</a>.';
-        container[audiojs].helpers.removeClass(this.wrapper, player.loadingClass);
-        container[audiojs].helpers.addClass(this.wrapper, player.errorClass);
-        errorMessage.innerHTML = html;
-      },
       loadError: function(e) {
         var player = this.settings.createPlayer,
             errorMessage = getByClass(player.errorMessageClass, this.wrapper);
@@ -229,10 +191,10 @@
           instances = []
           options = options || {};
       for (var i = 0, ii = audioElements.length; i < ii; i++) {
-        
+
         if ((" " + audioElements[i].parentNode.className + " ").replace(/[\n\t]/g, " ").indexOf(" audiojs ") > -1)
           continue;
-          
+
         instances.push(this.newInstance(audioElements[i], options));
       }
       return instances;
@@ -264,16 +226,8 @@
       // If css has been passed in, dynamically inject it into the `<head>`.
       if (s.css) this.helpers.injectCss(audio, s.css);
 
-      // If `<audio>` or mp3 playback isn't supported, insert the swf & attach the required events for it.
-      if (s.useFlash && s.hasFlash) {
-        this.injectFlash(audio, id);
-        this.attachFlashEvents(audio.wrapper, audio);
-      } else if (s.useFlash && !s.hasFlash) {
-        s.flashError.apply(audio);
-      }
-
       // Attach event callbacks to the new audiojs instance.
-      if (!s.useFlash || (s.useFlash && s.hasFlash)) this.attachEvents(audio.wrapper, audio);
+      this.attachEvents(audio.wrapper, audio);
 
       // Store the newly-created `audiojs` instance.
       this.instances[id] = audio;
@@ -320,9 +274,6 @@
         audio.skipTo(relativeLeft / scrubber.offsetWidth);
       });
 
-      // _If flash is being used, then the following handlers don't need to be registered._
-      if (audio.settings.useFlash) return;
-
       // Start tracking the load progress of the track.
       container[audiojs].events.trackLoadProgress(audio);
 
@@ -341,73 +292,6 @@
         audio.settings.loadError.apply(audio);
       });
 
-    },
-
-    // Flash requires a slightly different API to the `<audio>` element, so this method is used to overwrite the standard event handlers.
-    attachFlashEvents: function(element, audio) {
-      audio['swfReady'] = false;
-      audio['load'] = function(mp3) {
-        // If the swf isn't ready yet then just set `audio.mp3`. `init()` will load it in once the swf is ready.
-        audio.mp3 = mp3;
-        if (audio.swfReady) audio.element.load(mp3);
-      }
-      audio['loadProgress'] = function(percent, duration) {
-        audio.loadedPercent = percent;
-        audio.duration = duration;
-        audio.settings.loadStarted.apply(audio);
-        audio.settings.loadProgress.apply(audio, [percent]);
-      }
-      audio['skipTo'] = function(percent) {
-        if (percent > audio.loadedPercent) return;
-        audio.updatePlayhead.call(audio, [percent])
-        audio.element.skipTo(percent);
-      }
-      audio['updatePlayhead'] = function(percent) {
-        audio.settings.updatePlayhead.apply(audio, [percent]);
-      }
-      audio['play'] = function() {
-        // If the audio hasn't started preloading, then start it now.
-        // Then set `preload` to `true`, so that any tracks loaded in subsequently are loaded straight away.
-        if (!audio.settings.preload) {
-          audio.settings.preload = true;
-          audio.element.init(audio.mp3);
-        }
-        audio.playing = true;
-        // IE doesn't allow a method named `play()` to be exposed through `ExternalInterface`, so lets go with `pplay()`.
-        // <http://dev.nuclearrooster.com/2008/07/27/externalinterfaceaddcallback-can-cause-ie-js-errors-with-certain-keyworkds/>
-        audio.element.pplay();
-        audio.settings.play.apply(audio);
-      }
-      audio['pause'] = function() {
-        audio.playing = false;
-        // Use `ppause()` for consistency with `pplay()`, even though it isn't really required.
-        audio.element.ppause();
-        audio.settings.pause.apply(audio);
-      }
-      audio['setVolume'] = function(v) {
-        audio.element.setVolume(v);
-      }
-      audio['loadStarted'] = function() {
-        // Load the mp3 specified by the audio element into the swf.
-        audio.swfReady = true;
-        if (audio.settings.preload) audio.element.init(audio.mp3);
-        if (audio.settings.autoplay) audio.play.apply(audio);
-      }
-    },
-
-    // ### Injecting an swf from a string
-    // Build up the swf source by replacing the `$keys` and then inject the markup into the page.
-    injectFlash: function(audio, id) {
-      var flashSource = this.flashSource.replace(/\$1/g, id);
-      flashSource = flashSource.replace(/\$2/g, audio.settings.swfLocation);
-      // `(+new Date)` ensures the swf is not pulled out of cache. The fixes an issue with Firefox running multiple players on the same page.
-      flashSource = flashSource.replace(/\$3/g, (+new Date + Math.random()));
-      // Inject the player markup using a more verbose `innerHTML` insertion technique that works with IE.
-      var html = audio.wrapper.innerHTML,
-          div = document.createElement('div');
-      div.innerHTML = flashSource + html;
-      audio.wrapper.innerHTML = div.innerHTML;
-      audio.element = this.helpers.getSwf(id);
     },
 
     // ## Helper functions
@@ -483,11 +367,6 @@
         fragment.appendChild(div);
         div.innerHTML = audioTag.outerHTML;
         return div.firstChild;
-      },
-      // **Cross-browser `<object>` / `<embed>` element selection**
-      getSwf: function(name) {
-        var swf = document[name] || window[name];
-        return swf.length > 1 ? swf[swf.length - 1] : swf;
       }
     },
     // ## Event-handling
