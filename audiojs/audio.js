@@ -508,9 +508,10 @@
       this.settings.updatePlayhead.apply(this, [percent]);
     },
     skipTo: function(percent) {
-      if (percent > this.loadedPercent) return;
-      this.element.currentTime = this.duration * percent;
-      this.updatePlayhead();
+      if (this.element.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        this.element.currentTime = this.duration * percent;
+        this.updatePlayhead();
+      }
     },
     load: function(mp3) {
       this.loadStartedCalled = false;
