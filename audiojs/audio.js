@@ -274,9 +274,6 @@
         audio.skipTo(relativeLeft / scrubber.offsetWidth);
       });
 
-      // Start tracking the load progress of the track.
-      container[audiojs].events.trackLoadProgress(audio);
-
       container[audiojs].events.addListener(audio.element, 'timeupdate', function(e) {
         audio.updatePlayhead.apply(audio);
       });
@@ -285,13 +282,18 @@
         audio.trackEnded.apply(audio);
       });
 
+      container[audiojs].events.addListener(audio.element, 'progress', function(e) {
+        audio.loadProgress.apply(audio);
+      });
+
       container[audiojs].events.addListener(audio.source, 'error', function(e) {
-        // on error, cancel any load timers that are running.
+        // on error, cancel any timers that are running.
         clearInterval(audio.readyTimer);
-        clearInterval(audio.loadTimer);
         audio.settings.loadError.apply(audio);
       });
 
+      // Start tracking the load progress of the track.
+      container[audiojs].events.trackLoadProgress(audio);
     },
 
     // ## Helper functions
@@ -406,9 +408,7 @@
       trackLoadProgress: function(audio) {
         // If `preload` has been set to `none`, then we don't want to start loading the track yet.
         if (!audio.settings.preload) return;
-
         var readyTimer,
-            loadTimer,
             audio = audio,
             ios = (/(ipod|iphone|ipad)/i).test(navigator.userAgent);
 
@@ -421,15 +421,10 @@
           if (audio.element.readyState > 1) {
             if (audio.settings.autoplay) audio.play.apply(audio);
             clearInterval(readyTimer);
-            // Once we have data, start tracking the load progress.
-            loadTimer = setInterval(function() {
-              audio.loadProgress.apply(audio);
-              if (audio.loadedPercent >= 1) clearInterval(loadTimer);
-            }, 200);
+            audio.loadProgress.apply(audio);
           }
         }, 200);
         audio.readyTimer = readyTimer;
-        audio.loadTimer = loadTimer;
       },
 
       // **Douglas Crockford's IE6 memory leak fix**
