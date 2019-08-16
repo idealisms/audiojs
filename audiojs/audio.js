@@ -33,6 +33,7 @@
       preload: true,
       imageLocation: path + 'player-graphics.gif',
       retinaImageLocation: path + 'player-graphics@2x.gif',
+      playbackRates: [1.0, 1.25, 1.5, 1.75, 2.0],
       // The default markup and classes for creating the player:
       createPlayer: {
         markup:
@@ -49,6 +50,7 @@
           '<div class="time">' +
           '  <em class="played">00:00</em>/<strong class="duration">00:00</strong>' +
           '</div>' +
+          '<div class="playback-rate">1.0x</div>' +
           '<div class="error-message"></div>',
         playPauseClass: 'play-pause',
         scrubberClass: 'scrubber',
@@ -60,6 +62,7 @@
         errorMessageClass: 'error-message',
         playingClass: 'playing',
         loadingClass: 'loading',
+        playbackRateClass: 'playback-rate',
         errorClass: 'error'
       },
       // The css used by the default player. This is is dynamically injected into a `<style>` tag in the top of the head.
@@ -73,16 +76,17 @@
         '.audiojs .play-pause { width: 25px; height: 40px; padding: 4px 6px; margin: 0px; overflow: hidden; border-right: 1px solid #000; }' +
         '.audiojs p { display: none; width: 25px; height: 40px; margin: 0px; cursor: pointer; }' +
         '.audiojs .play { display: block; }' +
-        '.audiojs .scrubber { position: relative; flex: 1; background: #5a5a5a; height: 14px; margin: 10px; border-top: 1px solid #3f3f3f; border-left: 0px; border-bottom: 0px; overflow: hidden; }' +
+        '.audiojs .scrubber { position: relative; flex: 1; background: #5a5a5a; height: 14px; margin: 10px 12px; border-top: 1px solid #3f3f3f; border-left: 0px; border-bottom: 0px; overflow: hidden; }' +
         '.audiojs .progress { position: absolute; top: 0px; left: 0px; height: 14px; width: 0px; background: #ccc; z-index: 1;' +
         '  background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #ccc), color-stop(0.5, #ddd), color-stop(0.51, #ccc), color-stop(1, #ccc));' +
         '  background-image: -moz-linear-gradient(center top, #ccc 0%, #ddd 50%, #ccc 51%, #ccc 100%); }' +
         '.audiojs .loaded { position: absolute; top: 0px; left: 0px; height: 14px; width: 0px; background: #000;' +
         '  background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0, #222), color-stop(0.5, #333), color-stop(0.51, #222), color-stop(1, #222));' +
         '  background-image: -moz-linear-gradient(center top, #222 0%, #333 50%, #222 51%, #222 100%); }' +
-        '.audiojs .time { height: 36px; line-height: 36px; margin: 0px 0px 0px 6px; padding: 0px 12px; border-left: 1px solid #000; color: #ddd; text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5); }' +
+        '.audiojs .time, .audiojs .playback-rate { height: 36px; line-height: 36px; padding: 0px 12px; border-left: 1px solid #000; color: #ddd; text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5); }' +
         '.audiojs .time em { padding: 0px 2px 0px 0px; color: #f9f9f9; font-style: normal; }' +
         '.audiojs .time strong { padding: 0px 0px 0px 2px; font-weight: normal; }' +
+        '.audiojs .playback-rate { cursor: pointer; }' +
         '.audiojs .error-message { flex: 1; display: none; margin: 0px 10px; height: 36px; width: 400px; overflow: hidden; line-height: 36px; white-space: nowrap; color: #fff;' +
         '  text-overflow: ellipsis; -o-text-overflow: ellipsis; -icab-text-overflow: ellipsis; -khtml-text-overflow: ellipsis; -moz-text-overflow: ellipsis; -webkit-text-overflow: ellipsis; }' +
         '.audiojs .error-message a { color: #eee; text-decoration: none; padding-bottom: 1px; border-bottom: 1px solid #999; white-space: wrap; }' +
@@ -112,7 +116,7 @@
         '.loading .play, .loading .pause, .loading .error { display: none; }' +
         '.loading .loading { display: block; }' +
         '' +
-        '.error .time, .error .play, .error .pause, .error .scrubber, .error .loading { display: none; }' +
+        '.error .time, .error .play, .error .pause, .error .scrubber, .error .loading, .error .playback-rate { display: none; }' +
         '.error .error { display: block; }' +
         '.error .play-pause p { cursor: auto; }' +
         '.error .error-message { display: block; }',
@@ -165,6 +169,11 @@
             m = Math.floor(p / 60),
             s = Math.floor(p % 60);
         played.innerHTML = ((m<10?'0':'')+m+':'+(s<10?'0':'')+s);
+      },
+      updatePlaybackRate: function() {
+        var player = this.settings.createPlayer,
+            playbackRate = getByClass(player.playbackRateClass, this.wrapper);
+        playbackRate.innerHTML = this.playbackRate + 'x';
       }
     },
 
@@ -263,7 +272,8 @@
       if (!audio.settings.createPlayer) return;
       var player = audio.settings.createPlayer,
           playPause = getByClass(player.playPauseClass, wrapper),
-          scrubber = getByClass(player.scrubberClass, wrapper);
+          scrubber = getByClass(player.scrubberClass, wrapper),
+          playbackRate = getByClass(player.playbackRateClass, wrapper);
 
       container[audiojs].events.addListener(playPause, 'click', function(e) {
         audio.playPause.apply(audio);
@@ -273,6 +283,12 @@
         var relativeLeft = e.clientX - this.getBoundingClientRect().left;
         audio.skipTo(relativeLeft / scrubber.offsetWidth);
       });
+
+      if (playbackRate) {
+        container[audiojs].events.addListener(playbackRate, 'click', function(e) {
+          audio.nextPlaybackRate.apply(audio);
+        });
+      }
 
       container[audiojs].events.addListener(audio.element, 'timeupdate', function(e) {
         audio.updatePlayhead.apply(audio);
@@ -493,6 +509,7 @@
     this.loadedPercent = 0;
     this.duration = 1;
     this.playing = false;
+    this.playbackRate = 1.0;
   }
 
   container[audiojsInstance].prototype = {
@@ -510,11 +527,13 @@
     },
     load: function(mp3) {
       this.loadStartedCalled = false;
+      this.playbackRate = 1.0;
       this.source.setAttribute('src', mp3);
       // The now outdated `load()` method is required for Safari 4
       this.element.load();
       this.mp3 = mp3;
       container[audiojs].events.trackLoadProgress(this);
+      this.settings.updatePlaybackRate.apply(this);
     },
     loadError: function() {
       this.settings.loadError.apply(this);
@@ -565,6 +584,12 @@
       this.playing = false;
       this.element.pause();
       this.settings.pause.apply(this);
+    },
+    nextPlaybackRate: function() {
+      let idx = (this.settings.playbackRates.indexOf(this.playbackRate) + 1) % this.settings.playbackRates.length;
+      this.playbackRate = this.settings.playbackRates[idx];
+      this.element.playbackRate = this.playbackRate;
+      this.settings.updatePlaybackRate.apply(this);
     },
     setVolume: function(v) {
       this.element.volume = v;
