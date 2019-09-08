@@ -1,0 +1,55 @@
+<rss version="2.0"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:atom="http://www.w3.org/2005/Atom"
+     xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+     xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+     xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:media="http://search.yahoo.com/mrss/"
+     xmlns:googleplay="http://www.google.com/schemas/play-podcasts/1.0"
+    >
+  <channel>
+    <title>Fake Feed</title>
+    <atom:link href="http://localhost:8090/demos/feed3.xml" rel="self" type="application/rss+xml" />
+    <link>http://localhost:8090/</link>
+    <description>This is the feed description.</description>
+    <lastBuildDate>Sat, 27 Jul 2019 00:00:00 -0700</lastBuildDate>
+    <sy:updatePeriod>hourly</sy:updatePeriod>
+    <sy:updateFrequency>1</sy:updateFrequency>
+    <language>en-us</language>
+    <itunes:subtitle>Subtitle!</itunes:subtitle>
+    <itunes:author>You</itunes:author>
+    <itunes:type>episodic</itunes:type>
+    <googleplay:author>You</googleplay:author>
+    <googleplay:email>author@example.com</googleplay:email>
+    <itunes:summary>Summary goes here.</itunes:summary>
+    <googleplay:description>This is the feed description</googleplay:description>
+    <itunes:owner>
+      <itunes:name>You</itunes:name>
+      <itunes:email>author@example.com</itunes:email>
+    </itunes:owner>
+    <itunes:category text="Business">
+      <itunes:category text="Careers" />
+    </itunes:category>
+    <itunes:explicit>no</itunes:explicit>
+    <googleplay:explicit>no</googleplay:explicit>
+    <generator>Hand rolled.</generator>
+        <item>
+          <title>Bensound - dubstep</title>
+          <itunes:title>Bensound - dubstep</itunes:title>
+          <link>https://raw.githubusercontent.com/kolber/audiojs/master/mp3/bensound-dubstep.mp3</link>
+          <pubDate>Sat, 27 Jul 2019 00:00:00 -0700</pubDate>
+          <dc:creator></dc:creator>
+          <guid>https://raw.githubusercontent.com/kolber/audiojs/master/mp3/bensound-dubstep.mp3</guid>
+          <itunes:author>You</itunes:author>
+
+          <itunes:episode>1</itunes:episode>
+
+        <itunes:summary>Episode summary.</itunes:summary>
+        <description>Episode summary.</description>
+        <googleplay:description>Episode summary.</googleplay:description>
+        <content:encoded><![CDATA[]]></content:encoded><enclosure url="https://raw.githubusercontent.com/kolber/audiojs/master/mp3/bensound-dubstep.mp3" length="1749768" type="audio/mpeg" /><itunes:duration>2:04</itunes:duration><itunes:explicit>no</itunes:explicit>
+          <googleplay:explicit>no</googleplay:explicit></item>
+  </channel>
+</rss>

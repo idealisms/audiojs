@@ -10,7 +10,9 @@
     <script src="../audiojs/audio.js"></script>
     <script>
         audiojs.events.ready(function() {
-            audiojs.createAll();
+            audiojs.createAll({
+                feedURL: 'feed3.xml'
+            });
         });
     </script>
 </head>

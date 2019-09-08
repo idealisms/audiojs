@@ -34,6 +34,8 @@
       imageLocation: path + 'player-graphics.gif',
       retinaImageLocation: path + 'player-graphics@2x.gif',
       playbackRates: [1.0, 1.25, 1.5, 1.75, 2.0],
+      // Used to get the duration if preload='none'.
+      feedURL: null,
       // The default markup and classes for creating the player:
       createPlayer: {
         markup:
@@ -159,6 +161,14 @@
         var player = this.settings.createPlayer;
         container[audiojs].helpers.removeClass(this.wrapper, player.playingClass);
       },
+      updateDuration: function(durationSeconds) {
+        this.duration = durationSeconds;
+        let player = this.settings.createPlayer,
+            duration = getByClass(player.durationClass, this.wrapper),
+            m = Math.floor(this.duration / 60),
+            s = Math.floor(this.duration % 60);
+        duration.innerHTML = ((m<10?'0':'')+m+':'+(s<10?'0':'')+s);
+      },
       updatePlayhead: function(percent) {
         var player = this.settings.createPlayer,
             progress = getByClass(player.progressClass, this.wrapper);
@@ -205,6 +215,9 @@
           continue;
 
         instances.push(this.newInstance(audioElements[i], options));
+      }
+      if (options.feedURL) {
+        this.loadTrackLengthsFromFeed(options.feedURL, instances);
       }
       return instances;
     },
@@ -310,6 +323,34 @@
 
       // Start tracking the load progress of the track.
       container[audiojs].events.trackLoadProgress(audio);
+    },
+
+    loadTrackLengthsFromFeed: function(feedURL, audiojsInstances) {
+      fetch(feedURL).then(function(response) {
+        response.text().then(function(feedText) {
+          let domparser = new DOMParser();
+          let doc = domparser.parseFromString(feedText, 'text/xml');
+          for (let instance of audiojsInstances) {
+            if (instance.settings.preload) {
+              continue;
+            }
+            let xpathResult = document.evaluate(`//item[enclosure[@url="${instance.mp3}"]]`, doc, null, XPathResult.ANY_UNORDERED_NODE_TYPE, null)
+            let item = xpathResult.singleNodeValue;
+            if (!item) {
+              continue;
+            }
+            let durationTag = item.getElementsByTagName('itunes:duration');
+            if (!durationTag || durationTag.length != 1) {
+              continue;
+            }
+            let durationText = durationTag[0].textContent;
+            let durationSeconds = durationText.split(':')
+                .map(token => parseInt(token, 10))
+                .reduce((previous, current) => previous * 60 + current, 0);
+            instance.settings.updateDuration.apply(instance, [durationSeconds]);
+          }
+        });
+      })
     },
 
     // ## Helper functions
@@ -576,9 +617,13 @@
         this.element.setAttribute('preload', 'auto');
         container[audiojs].events.trackLoadProgress(this);
       }
-      this.playing = true;
-      this.element.play();
-      this.settings.play.apply(this);
+      this.element.play().then(() => {
+        this.playing = true;
+        this.settings.play.apply(this);
+      }).catch((error) => {
+        console.log('Error trying to play audio', error);
+        this.settings.pause.apply(this);
+      });
     },
     pause: function() {
       this.playing = false;
